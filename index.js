@@ -1,5 +1,8 @@
 const puppeteer = require('puppeteer');
 const CREDS = require('./creds');
+const mongoose = require('mongoose');
+const User = require('./models/user');
+
 
 async function run() {
   const browser = await puppeteer.launch({
@@ -93,11 +96,27 @@ async function run() {
   			continue;
 
   		console.log('page ', h, ': ', username, ' -> ', email);
-
-		// TODO save this users
+      upsertUser({
+        username: username,
+        email: email,
+        dateCrawled: new Date()
+      });
 	}
 }
+function upsertUser(userObj) {
 
+	const DB_URL = 'mongodb://localhost/thal';
+
+  	if (mongoose.connection.readyState == 0) { mongoose.connect(DB_URL); }
+
+    	// if this email exists, update the entry, don't insert
+	let conditions = { email: userObj.email };
+	let options = { upsert: true, new: true, setDefaultsOnInsert: true };
+
+  	User.findOneAndUpdate(conditions, userObj, options, (err, result) => {
+  		if (err) throw err;
+  	});
+}
 
 }
 
